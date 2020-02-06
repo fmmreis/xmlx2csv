@@ -40,6 +40,12 @@ import org.xml.sax.XMLReader;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.Format;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.Locale;
 
 /**
  * A rudimentary XLSX -> CSV processor modeled on the
@@ -133,12 +139,16 @@ public class XLSX2CSV {
             // Number or string?
             try {
                 //noinspection ResultOfMethodCallIgnored
-                Double.parseDouble(formattedValue);
+
+                //Assumes is US
+                Double number = NumberFormat.getInstance(Locale.US).parse(formattedValue).doubleValue();
+
+                output.append(numberFormat.format(number));
+
+                //Double.parseDouble(formattedValue);
+                //output.append(formattedValue);
+            } catch (ParseException e) {
                 output.append(formattedValue);
-            } catch (NumberFormatException e) {
-                //output.append('"');
-                output.append(formattedValue);
-                //output.append('"');
             }
         }
     }
@@ -163,6 +173,10 @@ public class XLSX2CSV {
 
     private final int starColumn = 0;
 
+    private final String lang;
+
+    private NumberFormat numberFormat;
+
     /**
      * Creates a new XLSX -> CSV examples
      *
@@ -170,11 +184,12 @@ public class XLSX2CSV {
      * @param output     The PrintStream to output the CSV to
      * @param minColumns The minimum number of columns to output, or -1 for no minimum
      */
-    public XLSX2CSV(OPCPackage pkg, PrintStream output, int minColumns, char separator) {
+    public XLSX2CSV(OPCPackage pkg, PrintStream output, int minColumns, char separator, String lang) {
         this.xlsxPackage = pkg;
         this.output = output;
         this.minColumns = minColumns;
         this.separator = separator;
+        this.lang = lang;
     }
 
     /**
@@ -220,6 +235,9 @@ public class XLSX2CSV {
         StylesTable styles = xssfReader.getStylesTable();
         XSSFReader.SheetIterator iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
         int index = 0;
+
+        this.numberFormat = "EN".equals(this.lang) ? NumberFormat.getInstance(Locale.US) : NumberFormat.getInstance(Locale.FRANCE);
+
         while (iter.hasNext()) {
             try (InputStream stream = iter.next()) {
                 String sheetName = iter.getSheetName();
@@ -267,7 +285,7 @@ public class XLSX2CSV {
 
         // The package open is instantaneous, as it should be.
         try (OPCPackage p = OPCPackage.open(xlsxFile.getPath(), PackageAccess.READ)) {
-            XLSX2CSV xlsx2csv = new XLSX2CSV(p, System.out, minColumns, separator);
+            XLSX2CSV xlsx2csv = new XLSX2CSV(p, System.out, minColumns, separator, "EN");
             xlsx2csv.process();
         }
 
