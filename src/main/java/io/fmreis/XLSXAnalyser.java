@@ -67,8 +67,7 @@ import java.io.PrintStream;
  */
 public class XLSXAnalyser {
 
-
-    public class MySAXTerminatorException extends SAXException {
+    public class MySAXTerminatorException extends RuntimeException {
 
     }
 
@@ -86,6 +85,7 @@ public class XLSXAnalyser {
             if(currentRowColumnCount > globalMaxColumnCount){
                 globalMaxColumnCount = currentRowColumnCount;
             }
+            throw new MySAXTerminatorException();
         }
 
         @Override
@@ -136,6 +136,8 @@ public class XLSXAnalyser {
 
     @SuppressWarnings("Duplicates")
     public void process() throws IOException, OpenXML4JException, SAXException {
+        long inicio = System.currentTimeMillis();
+
         ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(this.xlsxPackage);
         XSSFReader xssfReader = new XSSFReader(this.xlsxPackage);
         StylesTable styles = xssfReader.getStylesTable();
@@ -145,10 +147,16 @@ public class XLSXAnalyser {
         while (iter.hasNext()) {
             try (InputStream stream = iter.next()) {
                 String sheetName = iter.getSheetName();
-                processSheet(styles, strings, new SheetAnalyzer(), stream);
+                try {
+                    processSheet(styles, strings, new SheetAnalyzer(), stream);
+                } catch (MySAXTerminatorException e){
+                    System.out.println("Sheet " + sheetName + ": " + currentRowColumnCount);
+                    System.out.println("Global : " + globalMaxColumnCount);
+                }
             }
             ++index;
         }
+        System.out.println((System.currentTimeMillis() - inicio) / 1000 + " segundos for analysis");
     }
 
     public int getMinimumCols() {
@@ -168,7 +176,7 @@ public class XLSXAnalyser {
 
     @SuppressWarnings("Duplicates")
     public static void main(String[] args) throws Exception {
-        System.out.println(getMinimumCols("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/poi_test_columns.xlsx"));
+        System.out.println(getMinimumCols("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/big.xlsx"));
     }
 
 

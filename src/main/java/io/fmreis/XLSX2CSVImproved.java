@@ -39,10 +39,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.sql.Date;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -181,8 +178,7 @@ public class XLSX2CSVImproved {
     /**
      * Destination for data
      */
-    private final PrintStream output;
-
+    private final PrintWriter output;
 
     private final char separator;
 
@@ -199,7 +195,8 @@ public class XLSX2CSVImproved {
      * @param output     The PrintStream to output the CSV to
      * @param minColumns The minimum number of columns to output, or -1 for no minimum
      */
-    public XLSX2CSVImproved(OPCPackage pkg, PrintStream output, int minColumns, char separator, String lang) {
+
+    public XLSX2CSVImproved(OPCPackage pkg, PrintWriter output, int minColumns, char separator, String lang) {
         this.xlsxPackage = pkg;
         this.output = output;
         this.minColumns = minColumns;
@@ -247,6 +244,7 @@ public class XLSX2CSVImproved {
      */
     @SuppressWarnings("Duplicates")
     public void process() throws IOException, OpenXML4JException, SAXException {
+        long inicio = System.currentTimeMillis();
         ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(this.xlsxPackage);
         XSSFReader xssfReader = new XSSFReader(this.xlsxPackage);
         StylesTable styles = xssfReader.getStylesTable();
@@ -262,20 +260,24 @@ public class XLSX2CSVImproved {
             }
             ++index;
         }
+        System.out.println((System.currentTimeMillis() - inicio) / 1000 + " segundos for processing");
     }
 
     public static void main(String[] args) throws Exception {
 
-        File xlsxFile = new File("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/poi_test_columns.xlsx");
+        File xlsxFile = new File("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/big.xlsx");
+        File file = new File("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/out.csv");
 
         char separator = ';';
         String lang = "EN";
 
         // The package open is instantaneous, as it should be.
-        try (OPCPackage opcPackage = OPCPackage.open(xlsxFile.getPath(), PackageAccess.READ)) {
+        try (OPCPackage opcPackage = OPCPackage.open(xlsxFile.getPath(), PackageAccess.READ);
+             PrintWriter printWriter = new PrintWriter(file)) {
             XLSXAnalyser xlsxAnalyser = new XLSXAnalyser(opcPackage);
-            XLSX2CSVImproved xlsx2csv = new XLSX2CSVImproved(opcPackage, System.out, xlsxAnalyser.getMinimumCols(), separator, lang);
+            XLSX2CSVImproved xlsx2csv = new XLSX2CSVImproved(opcPackage, printWriter, xlsxAnalyser.getMinimumCols(), separator, lang);
             xlsx2csv.process();
+            printWriter.flush();
         }
     }
 }
