@@ -81,7 +81,7 @@ public class XLSX2CSV_Original {
         private void outputMissingRows(int number) {
             for (int i=0; i<number; i++) {
                 for (int j=0; j<minColumns; j++) {
-                    output.append(',');
+                    output.append(';');
                 }
                 output.append('\n');
             }
@@ -101,7 +101,7 @@ public class XLSX2CSV_Original {
         public void endRow(int rowNum) {
             // Ensure the minimum number of columns
             for (int i=currentCol; i<minColumns; i++) {
-                output.append(',');
+                output.append(';');
             }
             output.append('\n');
         }
@@ -112,7 +112,7 @@ public class XLSX2CSV_Original {
             if (firstCellOfRow) {
                 firstCellOfRow = false;
             } else {
-                output.append(',');
+                output.append(';');
             }
 
             // gracefully handle missing CellRef here in a similar way as XSSFCell does
@@ -124,7 +124,7 @@ public class XLSX2CSV_Original {
             int thisCol = (new CellReference(cellReference)).getCol();
             int missedCols = thisCol - currentCol - 1;
             for (int i=0; i<missedCols; i++) {
-                output.append(',');
+                output.append(';');
             }
             currentCol = thisCol;
 
@@ -236,7 +236,7 @@ public class XLSX2CSV_Original {
             return;
         }
 
-        int minColumns = -1;
+        int minColumns = 4;
         if (args.length >= 2)
             minColumns = Integer.parseInt(args[1]);
 

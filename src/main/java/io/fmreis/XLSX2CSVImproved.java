@@ -39,9 +39,15 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.sql.Date;
-import java.text.*;
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 /**
@@ -67,7 +73,7 @@ import java.util.Locale;
  * {@link SheetContentsHandler} and no SAX code needed of
  * your own!
  */
-public class XLSX2CSV {
+public class XLSX2CSVImproved {
     /**
      * Uses the XSSF Event SAX helpers to do most of the work
      *  of parsing the Sheet XML, and outputs the contents
@@ -101,6 +107,7 @@ public class XLSX2CSV {
         }
 
         @Override
+        @SuppressWarnings("Duplicates")
         public void endRow(int rowNum) {
             // Ensure the minimum number of columns
             if(rowNum <= 2)
@@ -112,6 +119,7 @@ public class XLSX2CSV {
         }
 
         @Override
+        @SuppressWarnings("Duplicates")
         public void cell(String cellReference, String formattedValue,
                          XSSFComment comment) {
 
@@ -191,7 +199,7 @@ public class XLSX2CSV {
      * @param output     The PrintStream to output the CSV to
      * @param minColumns The minimum number of columns to output, or -1 for no minimum
      */
-    public XLSX2CSV(OPCPackage pkg, PrintStream output, int minColumns, char separator, String lang) {
+    public XLSX2CSVImproved(OPCPackage pkg, PrintStream output, int minColumns, char separator, String lang) {
         this.xlsxPackage = pkg;
         this.output = output;
         this.minColumns = minColumns;
@@ -260,12 +268,13 @@ public class XLSX2CSV {
 
         File xlsxFile = new File("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/poi_test_columns.xlsx");
 
-        int minColumns = 7;
         char separator = ';';
+        String lang = "EN";
 
         // The package open is instantaneous, as it should be.
-        try (OPCPackage p = OPCPackage.open(xlsxFile.getPath(), PackageAccess.READ)) {
-            XLSX2CSV xlsx2csv = new XLSX2CSV(p, System.out, minColumns, separator, "EN");
+        try (OPCPackage opcPackage = OPCPackage.open(xlsxFile.getPath(), PackageAccess.READ)) {
+            XLSXAnalyser xlsxAnalyser = new XLSXAnalyser(opcPackage);
+            XLSX2CSVImproved xlsx2csv = new XLSX2CSVImproved(opcPackage, System.out, xlsxAnalyser.getMinimumCols(), separator, lang);
             xlsx2csv.process();
         }
     }
