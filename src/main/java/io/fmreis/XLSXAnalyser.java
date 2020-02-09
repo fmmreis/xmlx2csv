@@ -35,20 +35,13 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
-
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import static java.lang.Math.max;
 
 /**
- * A rudimentary XLSX -> CSV processor modeled on the
- * POI sample program XLS2CSVmra from the package
- * org.apache.poi.hssf.eventusermodel.examples.
- * As with the HSSF version, this tries to spot missing
- *  rows and cells, and output empty entries for them.
- * <p>
  * Data sheets are read using a SAX parser to keep the
  * memory footprint relatively small, so this should be
  * able to read enormous workbooks.  The styles table and
@@ -67,8 +60,14 @@ import java.io.PrintStream;
  */
 public class XLSXAnalyser {
 
-    public class MySAXTerminatorException extends RuntimeException {
 
+    /**
+     *  Convenient exception to interrupt SAX parsing
+     */
+    public class MySAXTerminatorException extends RuntimeException {
+        private MySAXTerminatorException(String message){
+            super(message);
+        }
     }
 
     private class SheetAnalyzer implements SheetContentsHandler {
@@ -82,10 +81,8 @@ public class XLSXAnalyser {
         @Override
         public void endRow(int rowNum) {
             //set new value if new value is greater than the current most wide row
-            if(currentRowColumnCount > globalMaxColumnCount){
-                globalMaxColumnCount = currentRowColumnCount;
-            }
-            throw new MySAXTerminatorException();
+            globalMaxColumnCount = max(globalMaxColumnCount, currentRowColumnCount);
+            throw new MySAXTerminatorException("Got the number of cells for the line " + currentRowColumnCount);
         }
 
         @Override
@@ -95,7 +92,6 @@ public class XLSXAnalyser {
 
         }
     }
-
 
     ///////////////////////////////////////
 
@@ -115,7 +111,7 @@ public class XLSXAnalyser {
     }
 
     @SuppressWarnings("Duplicates")
-    public void processSheet(
+    private void processSheet(
             Styles styles,
             SharedStrings strings,
             SheetContentsHandler sheetHandler,
@@ -135,7 +131,7 @@ public class XLSXAnalyser {
     }
 
     @SuppressWarnings("Duplicates")
-    public void process() throws IOException, OpenXML4JException, SAXException {
+    private void process() throws IOException, OpenXML4JException, SAXException {
         long inicio = System.currentTimeMillis();
 
         ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(this.xlsxPackage);
@@ -149,21 +145,20 @@ public class XLSXAnalyser {
                 String sheetName = iter.getSheetName();
                 try {
                     processSheet(styles, strings, new SheetAnalyzer(), stream);
-                } catch (MySAXTerminatorException e){
-                    System.out.println("Sheet " + sheetName + ": " + currentRowColumnCount);
-                    System.out.println("Global : " + globalMaxColumnCount);
+                } catch (MySAXTerminatorException ex){
+                    System.out.println(ex.getMessage());
                 }
             }
             ++index;
         }
-        System.out.println((System.currentTimeMillis() - inicio) / 1000 + " segundos for analysis");
+        System.out.println((System.currentTimeMillis() - inicio) / 1000 + " segundos for analysis, max length: " + globalMaxColumnCount);
     }
 
     public int getMinimumCols() {
         return globalMaxColumnCount;
     }
 
-    public static int getMinimumCols(String arg) throws IOException, OpenXML4JException, SAXException {
+    private static int getMinimumCols(String arg) throws IOException, OpenXML4JException, SAXException {
         File xlsxFile = new File(arg);
 
         // The package open is instantaneous, as it should be.
@@ -178,7 +173,5 @@ public class XLSXAnalyser {
     public static void main(String[] args) throws Exception {
         System.out.println(getMinimumCols("/home/fmreis/IdeaProjects/xlsx2csv/src/main/resources/big.xlsx"));
     }
-
-
 }
 
